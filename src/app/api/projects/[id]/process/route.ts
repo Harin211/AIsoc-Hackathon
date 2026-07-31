@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { processProject } from "@/lib/pipeline";
 import { buildProjectView } from "@/lib/roleView";
+import { getChatTurns } from "@/lib/store";
 
 export async function POST(
   req: Request,
@@ -17,10 +18,11 @@ export async function POST(
 
   try {
     const result = await processProject(id, { forceCurated: Boolean(body.forceCurated) });
+    const chat = await getChatTurns(id, user.id);
     return NextResponse.json({
       mode: result.mode,
       note: result.note,
-      view: buildProjectView(result.state, user.role),
+      view: buildProjectView(result.state, user.role, chat),
     });
   } catch (err) {
     return NextResponse.json(

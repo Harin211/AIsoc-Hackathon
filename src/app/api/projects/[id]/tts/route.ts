@@ -15,9 +15,9 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const state = getProjectState(id);
+  const state = await getProjectState(id);
   if (!state || !state.processed) {
-    return NextResponse.json({ error: "Process the notebook first" }, { status: 400 });
+    return NextResponse.json({ error: "Process the project first" }, { status: 400 });
   }
 
   const insights = visibleInsightsForRole(state.insights, user.role);

@@ -23,7 +23,7 @@ export default function Footer() {
           </h2>
           <p className="max-w-xl text-muted-foreground">
             Sign in and see role-aware briefings, Alignment Radar, and
-            grounded chat on a real notebook in under a minute.
+            grounded chat on a real project in under a minute.
           </p>
           <Button size="lg" render={<Link href="/login" />}>
             Start for free

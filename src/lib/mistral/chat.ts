@@ -4,7 +4,7 @@ import type { ChatCitation, Insight, Role } from "@/lib/types";
 
 const TOP_K = 5;
 
-export async function answerFromNotebook(input: {
+export async function answerFromProject(input: {
   role: Role;
   team: string;
   message: string;
@@ -13,7 +13,7 @@ export async function answerFromNotebook(input: {
   if (!input.insights.length) {
     return {
       answer:
-        "This notebook has no processed insights yet — run Process on a source first.",
+        "This project has no processed insights yet — run Process on a source first.",
       citations: [],
     };
   }
@@ -36,7 +36,7 @@ export async function answerFromNotebook(input: {
     const top = scored[0]?.insight;
     const answer = top
       ? `${top.framings[input.role] ?? top.raw_statement} [set MISTRAL_API_KEY for live grounded chat]`
-      : "No relevant insight found in this notebook.";
+      : "No relevant insight found in this project.";
     return {
       answer,
       citations: top
@@ -45,7 +45,7 @@ export async function answerFromNotebook(input: {
     };
   }
 
-  const system = `You are the SyncSpace notebook assistant. Answer ONLY using the provided candidate insights — never invent facts.
+  const system = `You are the SyncSpace project assistant. Answer ONLY using the provided candidate insights — never invent facts.
 The reader is a ${input.role} on the ${input.team} team. Frame the answer at their altitude, but never drop a concrete number, date, or severity present in the insights.
 Always cite which insight ids you actually used. If the insights don't cover the question, say so plainly.
 Return JSON: { "answer": "...", "insight_ids": ["insight_xxxx", "..."] }`;

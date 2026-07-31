@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { buildProjectView } from "@/lib/roleView";
-import { getProjectState } from "@/lib/store";
+import { getChatTurns, getProjectState } from "@/lib/store";
 
 export async function GET(
   _req: Request,
@@ -13,10 +13,11 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const state = getProjectState(id);
+  const state = await getProjectState(id);
   if (!state) {
-    return NextResponse.json({ error: "Notebook not found" }, { status: 404 });
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ view: buildProjectView(state, user.role) });
+  const chat = await getChatTurns(id, user.id);
+  return NextResponse.json({ view: buildProjectView(state, user.role, chat) });
 }

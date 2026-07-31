@@ -16,8 +16,8 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!getProjectState(id)) {
-    return NextResponse.json({ error: "Notebook not found" }, { status: 404 });
+  if (!(await getProjectState(id))) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
   const formData = await req.formData().catch(() => null);
@@ -57,7 +57,7 @@ export async function POST(
       lines: linesFromText(parsed.text),
     };
 
-    addDocument(id, doc);
+    await addDocument(id, doc);
     return NextResponse.json({ document: doc, warning: parsed.warning ?? null });
   } catch (err) {
     return NextResponse.json(

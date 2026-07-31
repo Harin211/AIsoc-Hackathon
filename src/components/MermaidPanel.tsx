@@ -85,7 +85,7 @@ export function MermaidPanel({
           <div>
             <h2 className="font-display text-lg font-semibold">Decision flowchart</h2>
             <p className="text-sm text-muted-foreground">
-              Visualize how this notebook&rsquo;s decisions connect.
+              Visualize how this project&rsquo;s decisions connect.
             </p>
           </div>
         </header>
@@ -117,7 +117,7 @@ export function MermaidPanel({
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Anchored to {insights.length} insights in the project notebook.
+          Anchored to {insights.length} insights in the project.
         </p>
       </section>
 
@@ -126,7 +126,7 @@ export function MermaidPanel({
           <DialogHeader>
             <DialogTitle>Decision flowchart</DialogTitle>
             <DialogDescription>
-              How this notebook&rsquo;s decisions connect.
+              How this project&rsquo;s decisions connect.
             </DialogDescription>
           </DialogHeader>
           <div

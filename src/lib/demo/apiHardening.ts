@@ -2,12 +2,12 @@ import type {
   ChatMessage,
   ConflictFlag,
   Insight,
-  ProjectNotebook,
+  Project,
   TranscriptLine,
 } from "@/lib/types";
 
-/** Second seed notebook — ships pre-processed so it needs no Mistral call. */
-export const DEMO_PROJECT_API: ProjectNotebook = {
+/** Second seed project — ships pre-processed so it needs no Mistral call. */
+export const DEMO_PROJECT_API: Project = {
   id: "api_hardening",
   name: "API Hardening",
   description:

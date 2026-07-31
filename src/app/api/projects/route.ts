@@ -8,7 +8,7 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  return NextResponse.json({ projects: listProjects(user.projectIds) });
+  return NextResponse.json({ projects: await listProjects(user.projectIds) });
 }
 
 export async function POST(req: Request) {
@@ -20,10 +20,10 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { name?: string };
   const name = body.name?.trim();
   if (!name) {
-    return NextResponse.json({ error: "Notebook name required" }, { status: 400 });
+    return NextResponse.json({ error: "Project name required" }, { status: 400 });
   }
 
-  const state = createProject(name);
-  addProjectToUser(user.username, state.project.id);
+  const state = await createProject(name);
+  await addProjectToUser(user.id, state.project.id);
   return NextResponse.json({ project: state.project });
 }

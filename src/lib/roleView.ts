@@ -1,4 +1,11 @@
-import type { ConflictFlag, Insight, ProjectState, ProjectView, Role } from "@/lib/types";
+import type {
+  ChatTurn,
+  ConflictFlag,
+  Insight,
+  ProjectState,
+  ProjectView,
+  Role,
+} from "@/lib/types";
 
 /** Insights relevant to `role`; falls back to the full set if none match. */
 export function visibleInsightsForRole(insights: Insight[], role: Role): Insight[] {
@@ -16,7 +23,11 @@ export function visibleConflictsForRole(
   );
 }
 
-export function buildProjectView(state: ProjectState, role: Role): ProjectView {
+export function buildProjectView(
+  state: ProjectState,
+  role: Role,
+  chat: ChatTurn[],
+): ProjectView {
   const insights = visibleInsightsForRole(state.insights, role);
   const conflicts = visibleConflictsForRole(
     state.conflicts,
@@ -31,7 +42,7 @@ export function buildProjectView(state: ProjectState, role: Role): ProjectView {
     insights,
     allInsights: state.insights,
     conflicts,
-    chat: state.chat,
+    chat,
     processed: state.processed,
     lastProcessedAt: state.lastProcessedAt,
     viewerRole: role,

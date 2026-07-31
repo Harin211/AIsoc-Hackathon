@@ -1,6 +1,6 @@
-import type { ConflictFlag, Insight, ProjectNotebook } from "@/lib/types";
+import type { ConflictFlag, Insight, Project } from "@/lib/types";
 
-export const DEMO_PROJECT: ProjectNotebook = {
+export const DEMO_PROJECT: Project = {
   id: "q3_launch",
   name: "Q3 Launch",
   description:

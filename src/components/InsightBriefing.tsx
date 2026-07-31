@@ -37,7 +37,7 @@ export function InsightBriefing({
 
       {insights.length === 0 && (
         <p className="text-sm italic text-muted-foreground">
-          No insights extracted from this notebook yet.
+          No insights extracted from this project yet.
         </p>
       )}
 

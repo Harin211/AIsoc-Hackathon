@@ -83,7 +83,7 @@ export function StudioRail({
       <div className="flex-1 overflow-y-auto p-4">
         {!view.processed && tab !== "sources" ? (
           <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
-            <p>Process this notebook to unlock {activeTabLabel.toLowerCase()}.</p>
+            <p>Process this project to unlock {activeTabLabel.toLowerCase()}.</p>
           </div>
         ) : (
           <>

@@ -14,7 +14,7 @@ export async function POST(
   }
 
   const body = (await req.json().catch(() => ({}))) as { insightId?: string };
-  const state = getProjectState(id);
+  const state = await getProjectState(id);
   const insight = state?.insights.find((i) => i.id === body.insightId);
   if (!insight) {
     return NextResponse.json({ error: "Insight not found" }, { status: 404 });
@@ -22,7 +22,7 @@ export async function POST(
 
   try {
     const framing = await translateInsight(insight, user.role);
-    const updated = upsertInsightFramings(id, insight.id, { [user.role]: framing });
+    const updated = await upsertInsightFramings(id, insight.id, { [user.role]: framing });
     return NextResponse.json({ insight: updated, framing });
   } catch (err) {
     return NextResponse.json(

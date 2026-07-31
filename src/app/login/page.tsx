@@ -48,7 +48,7 @@ export default function LoginPage() {
               <Radar className="size-5 text-primary" />
               SyncSpace
             </Link>
-            <p className="text-sm text-muted-foreground">Sign in to your team&rsquo;s notebook</p>
+            <p className="text-sm text-muted-foreground">Sign in to your team&rsquo;s project</p>
           </CardHeader>
 
           <CardContent>

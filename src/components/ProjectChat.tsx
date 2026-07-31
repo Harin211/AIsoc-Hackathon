@@ -7,9 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { ChatCitation, ChatTurn, Insight, ProjectNotebook } from "@/lib/types";
+import type { ChatCitation, ChatTurn, Insight, Project } from "@/lib/types";
 
-export function NotebookChat({
+export function ProjectChat({
   projectId,
   project,
   processed,
@@ -19,7 +19,7 @@ export function NotebookChat({
   onCitationClick,
 }: {
   projectId: string;
-  project: ProjectNotebook;
+  project: Project;
   processed: boolean;
   turns: ChatTurn[];
   insightsById: Map<string, Insight>;
@@ -64,11 +64,8 @@ export function NotebookChat({
   return (
     <main className="flex h-full min-h-0 flex-col overflow-hidden">
       <header className="flex flex-col gap-1 border-b border-border/60 px-6 py-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-primary">Notebook</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-primary">Project</p>
         <h1 className="font-display text-xl font-semibold">{project.name}</h1>
-        <p className="text-sm text-muted-foreground">
-          Ask anything — every answer is cited.
-        </p>
       </header>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6">
@@ -80,7 +77,7 @@ export function NotebookChat({
                 date still on track?&rdquo;
               </p>
             ) : (
-              <p>Process this notebook from the left sidebar to unlock grounded chat.</p>
+              <p>Process this project from the left sidebar to unlock grounded chat.</p>
             )}
           </div>
         )}
@@ -143,7 +140,7 @@ export function NotebookChat({
         <Input
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder={processed ? "Ask this notebook…" : "Process the notebook to chat"}
+          placeholder={processed ? "Ask this project…" : "Process the project to chat"}
           disabled={!processed || sending}
         />
         <Button

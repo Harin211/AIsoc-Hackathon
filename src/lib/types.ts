@@ -69,7 +69,7 @@ export interface DocumentSource {
   lines: DocumentLine[];
 }
 
-export interface ProjectNotebook {
+export interface Project {
   id: string;
   name: string;
   description: string;
@@ -88,22 +88,21 @@ export interface ChatTurn {
   createdAt: string;
 }
 
-/** Server-side persisted state for one notebook. */
+/** Server-side persisted state for one project. Chat is per-user, fetched separately. */
 export interface ProjectState {
-  project: ProjectNotebook;
+  project: Project;
   transcript: TranscriptLine[];
   discord: ChatMessage[];
   documents: DocumentSource[];
   insights: Insight[];
   conflicts: ConflictFlag[];
-  chat: ChatTurn[];
   processed: boolean;
   lastProcessedAt: string | null;
 }
 
-/** Role-filtered payload sent to the client for the active notebook. */
+/** Role-filtered payload sent to the client for the active project. */
 export interface ProjectView {
-  project: ProjectNotebook;
+  project: Project;
   transcript: TranscriptLine[];
   discord: ChatMessage[];
   documents: DocumentSource[];

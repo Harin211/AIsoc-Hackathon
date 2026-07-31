@@ -1,0 +1,77 @@
+import type { ChatMessage } from "@/lib/types";
+
+/** Pre-loaded #q3-launch Discord log — days after the July 14 meeting */
+export const DEMO_DISCORD: ChatMessage[] = [
+  {
+    id: "9821001",
+    author: "priya",
+    role: "marketing",
+    channel: "#q3-launch",
+    timestamp: "2026-07-16T09:14:00Z",
+    text: "Agency locked Sept 15. Press embargo lifts that morning.",
+  },
+  {
+    id: "9821002",
+    author: "ava",
+    role: "pm",
+    channel: "#q3-launch",
+    timestamp: "2026-07-16T09:22:00Z",
+    text: "Confirmed — still tracking to the meeting decision.",
+  },
+  {
+    id: "9821003",
+    author: "marcus",
+    role: "engineering",
+    channel: "#q3-launch",
+    timestamp: "2026-07-22T14:08:00Z",
+    text: "Webhook retries shipped. API freeze still on for July 28.",
+  },
+  {
+    id: "9821004",
+    author: "ava",
+    role: "pm",
+    channel: "#q3-launch",
+    timestamp: "2026-07-28T18:41:00Z",
+    text: "Freeze day — any last contract changes?",
+  },
+  {
+    id: "9821005",
+    author: "marcus",
+    role: "engineering",
+    channel: "#eng-backend",
+    timestamp: "2026-07-29T10:04:00Z",
+    text: "Heads up: we need a backend refactor on the events API before auth rates spike. It's going to push anything depending on those endpoints into Q4 — probably early October at best.",
+  },
+  {
+    id: "9821006",
+    author: "devon",
+    role: "engineering",
+    channel: "#eng-backend",
+    timestamp: "2026-07-29T10:11:00Z",
+    text: "Yeah the schema rewrite is ~3 weeks. Dependent features can't ship on the old contracts.",
+  },
+  {
+    id: "9821007",
+    author: "marcus",
+    role: "engineering",
+    channel: "#eng-backend",
+    timestamp: "2026-07-29T10:18:00Z",
+    text: "Onboarding analytics + a couple launch-critical endpoints are in that dependency set. I'll mention it in standup tomorrow.",
+  },
+  {
+    id: "9821008",
+    author: "priya",
+    role: "marketing",
+    channel: "#q3-launch",
+    timestamp: "2026-07-30T08:02:00Z",
+    text: "Final creative review next Tue — still Sept 15, right?",
+  },
+  {
+    id: "9821009",
+    author: "ava",
+    role: "pm",
+    channel: "#q3-launch",
+    timestamp: "2026-07-30T08:15:00Z",
+    text: "Yes — as far as I know nothing changed from the July 14 meeting.",
+  },
+];

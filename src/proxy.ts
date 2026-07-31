@@ -3,9 +3,9 @@ import { SESSION_COOKIE } from "@/lib/auth/constants";
 import { verifySessionToken } from "@/lib/auth/token";
 
 /**
- * Demo-grade route gate. Proxy checks the signed cookie only; every
- * server route also re-verifies the session (see `getSessionUser`) per
- * the Next.js guidance not to rely on Proxy alone for auth.
+ * Route gate. Proxy checks the signed cookie only; every server route
+ * also re-verifies the session (see `getSessionUser`) per the Next.js
+ * guidance not to rely on Proxy alone for auth.
  *
  * "/" is the public marketing landing page — it never requires auth.
  * The authenticated dashboard lives at "/app" (and its sub-routes/APIs).
@@ -23,16 +23,16 @@ export function proxy(request: NextRequest) {
   }
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;
-  const username = verifySessionToken(token);
+  const userId = verifySessionToken(token);
 
   if (pathname === "/login") {
-    if (username) {
+    if (userId) {
       return NextResponse.redirect(new URL("/app", request.url));
     }
     return NextResponse.next();
   }
 
-  if (!username) {
+  if (!userId) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

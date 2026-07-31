@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const user = findUserByCredentials(body.username, body.password);
+  const user = await findUserByCredentials(body.username, body.password);
   if (!user) {
     return NextResponse.json(
       { error: "Invalid username or password" },
@@ -23,6 +23,6 @@ export async function POST(req: Request) {
     );
   }
 
-  await setSessionCookie(user.username);
+  await setSessionCookie(user.id);
   return NextResponse.json({ user: toSessionUser(user) });
 }

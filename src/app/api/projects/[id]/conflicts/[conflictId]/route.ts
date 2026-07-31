@@ -20,7 +20,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
-  const conflict = updateConflictStatus(id, conflictId, body.status as ConflictStatus);
+  const conflict = await updateConflictStatus(id, conflictId, body.status as ConflictStatus);
   if (!conflict) {
     return NextResponse.json({ error: "Conflict not found" }, { status: 404 });
   }

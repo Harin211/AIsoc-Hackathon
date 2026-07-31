@@ -15,7 +15,7 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
   return (response.data ?? []).map((row) => row.embedding ?? []);
 }
 
-/** Cosine similarity — used to keep retrieval inside one notebook */
+/** Cosine similarity — used to keep retrieval inside one project */
 export function cosineSimilarity(a: number[], b: number[]): number {
   if (!a.length || !b.length || a.length !== b.length) return 0;
   let dot = 0;

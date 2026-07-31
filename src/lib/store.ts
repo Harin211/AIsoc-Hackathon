@@ -1,88 +1,51 @@
-import {
-  API_CONFLICTS,
-  API_DISCORD,
-  API_INSIGHTS,
-  API_TRANSCRIPT,
-  DEMO_PROJECT_API,
-} from "@/lib/demo/apiHardening";
-import { DEMO_PROJECT } from "@/lib/demo/curated";
-import { DEMO_DISCORD } from "@/lib/demo/discord";
-import { DEMO_TRANSCRIPT } from "@/lib/demo/transcript";
+import { and, asc, eq } from "drizzle-orm";
+import { getDb } from "@/lib/db/client";
+import { chatTurns, projects, userProjects } from "@/lib/db/schema";
 import type {
   ChatTurn,
   ConflictFlag,
   ConflictStatus,
   DocumentSource,
   Insight,
-  ProjectNotebook,
+  Project,
   ProjectState,
 } from "@/lib/types";
 
-declare global {
-  var __syncspaceProjects: Map<string, ProjectState> | undefined;
-}
+type ProjectRow = typeof projects.$inferSelect;
 
-function emptyProjectState(project: ProjectNotebook): ProjectState {
+function toProjectState(row: ProjectRow): ProjectState {
   return {
-    project,
-    transcript: [],
-    discord: [],
-    documents: [],
-    insights: [],
-    conflicts: [],
-    chat: [],
-    processed: false,
-    lastProcessedAt: null,
+    project: { id: row.id, name: row.name, description: row.description },
+    transcript: row.transcript,
+    discord: row.discord,
+    documents: row.documents,
+    insights: row.insights,
+    conflicts: row.conflicts,
+    processed: row.processed,
+    lastProcessedAt: row.lastProcessedAt?.toISOString() ?? null,
   };
 }
 
-function buildInitialProjects(): Map<string, ProjectState> {
-  const map = new Map<string, ProjectState>();
-
-  map.set(DEMO_PROJECT.id, {
-    project: DEMO_PROJECT,
-    transcript: DEMO_TRANSCRIPT,
-    discord: DEMO_DISCORD,
-    documents: [],
-    insights: [],
-    conflicts: [],
-    chat: [],
-    processed: false,
-    lastProcessedAt: null,
-  });
-
-  // Ships pre-processed so the demo narrative works without a Mistral call.
-  map.set(DEMO_PROJECT_API.id, {
-    project: DEMO_PROJECT_API,
-    transcript: API_TRANSCRIPT,
-    discord: API_DISCORD,
-    documents: [],
-    insights: structuredClone(API_INSIGHTS),
-    conflicts: structuredClone(API_CONFLICTS),
-    chat: [],
-    processed: true,
-    lastProcessedAt: "2026-07-27T11:30:00Z",
-  });
-
-  return map;
-}
-
-function getProjects(): Map<string, ProjectState> {
-  if (!globalThis.__syncspaceProjects) {
-    globalThis.__syncspaceProjects = buildInitialProjects();
-  }
-  return globalThis.__syncspaceProjects;
-}
-
-export function listProjects(projectIds: string[]): ProjectNotebook[] {
-  const projects = getProjects();
+export async function listProjects(projectIds: string[]): Promise<Project[]> {
+  if (!projectIds.length) return [];
+  const db = getDb();
+  const rows = await db.select().from(projects);
+  const byId = new Map(rows.map((r) => [r.id, r]));
   return projectIds
-    .map((id) => projects.get(id)?.project)
-    .filter((p): p is ProjectNotebook => Boolean(p));
+    .map((id) => byId.get(id))
+    .filter((r): r is ProjectRow => Boolean(r))
+    .map((r) => ({ id: r.id, name: r.name, description: r.description }));
 }
 
-export function getProjectState(projectId: string): ProjectState | null {
-  return getProjects().get(projectId) ?? null;
+export async function getProjectState(
+  projectId: string,
+): Promise<ProjectState | null> {
+  const [row] = await getDb()
+    .select()
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
+  return row ? toProjectState(row) : null;
 }
 
 function slugify(name: string): string {
@@ -91,76 +54,137 @@ function slugify(name: string): string {
     .trim()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
-  return base || "notebook";
+  return base || "project";
 }
 
-export function createProject(name: string): ProjectState {
-  const projects = getProjects();
-  let id = slugify(name);
-  if (projects.has(id)) {
-    id = `${id}_${Math.random().toString(36).slice(2, 6)}`;
+export async function createProject(name: string): Promise<ProjectState> {
+  const db = getDb();
+  const base = slugify(name);
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const id = attempt === 0 ? base : `${base}_${Math.random().toString(36).slice(2, 6)}`;
+    const [row] = await db
+      .insert(projects)
+      .values({ id, name, description: "" })
+      .onConflictDoNothing()
+      .returning();
+    if (row) return toProjectState(row);
   }
-  const state = emptyProjectState({ id, name, description: "" });
-  projects.set(id, state);
-  return state;
+
+  throw new Error("Could not allocate a unique project id");
 }
 
-export function addDocument(
+export async function addDocument(
   projectId: string,
   doc: DocumentSource,
-): ProjectState | null {
-  const state = getProjectState(projectId);
-  if (!state) return null;
-  state.documents.push(doc);
-  return state;
+): Promise<ProjectState | null> {
+  const db = getDb();
+  const [row] = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
+  if (!row) return null;
+
+  const documents = [...row.documents, doc];
+  // New sources invalidate the Insight Store — chat stays locked until re-process.
+  const [updated] = await db
+    .update(projects)
+    .set({ documents, processed: false, lastProcessedAt: null })
+    .where(eq(projects.id, projectId))
+    .returning();
+  return updated ? toProjectState(updated) : null;
 }
 
-export function setProcessed(
+export async function setProcessed(
   projectId: string,
   insights: Insight[],
   conflicts: ConflictFlag[],
-): ProjectState | null {
-  const state = getProjectState(projectId);
-  if (!state) return null;
-  state.insights = insights;
-  state.conflicts = conflicts;
-  state.processed = true;
-  state.lastProcessedAt = new Date().toISOString();
-  return state;
+): Promise<ProjectState | null> {
+  const [row] = await getDb()
+    .update(projects)
+    .set({ insights, conflicts, processed: true, lastProcessedAt: new Date() })
+    .where(eq(projects.id, projectId))
+    .returning();
+  return row ? toProjectState(row) : null;
 }
 
-export function updateConflictStatus(
+export async function updateConflictStatus(
   projectId: string,
   conflictId: string,
   status: ConflictStatus,
-): ConflictFlag | null {
-  const state = getProjectState(projectId);
-  if (!state) return null;
-  const conflict = state.conflicts.find((c) => c.id === conflictId);
+): Promise<ConflictFlag | null> {
+  const db = getDb();
+  const [row] = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
+  if (!row) return null;
+
+  const conflict = row.conflicts.find((c) => c.id === conflictId);
   if (!conflict) return null;
-  conflict.status = status;
-  return conflict;
+
+  const updatedConflict = { ...conflict, status };
+  const conflicts = row.conflicts.map((c) => (c.id === conflictId ? updatedConflict : c));
+  await db.update(projects).set({ conflicts }).where(eq(projects.id, projectId));
+  return updatedConflict;
 }
 
-export function upsertInsightFramings(
+export async function upsertInsightFramings(
   projectId: string,
   insightId: string,
   framings: Insight["framings"],
-): Insight | null {
-  const state = getProjectState(projectId);
-  if (!state) return null;
-  const insight = state.insights.find((i) => i.id === insightId);
+): Promise<Insight | null> {
+  const db = getDb();
+  const [row] = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
+  if (!row) return null;
+
+  const insight = row.insights.find((i) => i.id === insightId);
   if (!insight) return null;
-  insight.framings = { ...insight.framings, ...framings };
-  return insight;
+
+  const updatedInsight = { ...insight, framings: { ...insight.framings, ...framings } };
+  const insights = row.insights.map((i) => (i.id === insightId ? updatedInsight : i));
+  await db.update(projects).set({ insights }).where(eq(projects.id, projectId));
+  return updatedInsight;
 }
 
-export function appendChatTurn(
+/** Chat is private per user — every read/write is scoped to (projectId, userId). */
+export async function getChatTurns(
   projectId: string,
+  userId: string,
+): Promise<ChatTurn[]> {
+  const rows = await getDb()
+    .select()
+    .from(chatTurns)
+    .where(and(eq(chatTurns.projectId, projectId), eq(chatTurns.userId, userId)))
+    .orderBy(asc(chatTurns.createdAt));
+
+  return rows.map((r) => ({
+    id: r.id,
+    role: r.role,
+    content: r.content,
+    citations: r.citations ?? undefined,
+    createdAt: r.createdAt.toISOString(),
+  }));
+}
+
+export async function appendChatTurn(
+  projectId: string,
+  userId: string,
   turn: ChatTurn,
-): ProjectState | null {
-  const state = getProjectState(projectId);
-  if (!state) return null;
-  state.chat.push(turn);
-  return state;
+): Promise<void> {
+  await getDb().insert(chatTurns).values({
+    id: turn.id,
+    projectId,
+    userId,
+    role: turn.role,
+    content: turn.content,
+    citations: turn.citations ?? null,
+    createdAt: new Date(turn.createdAt),
+  });
+}
+
+export async function userHasProjectAccess(
+  userId: string,
+  projectId: string,
+): Promise<boolean> {
+  const [row] = await getDb()
+    .select({ projectId: userProjects.projectId })
+    .from(userProjects)
+    .where(and(eq(userProjects.userId, userId), eq(userProjects.projectId, projectId)))
+    .limit(1);
+  return Boolean(row);
 }

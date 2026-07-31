@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
-import { answerFromNotebook } from "@/lib/mistral/chat";
+import { answerFromProject } from "@/lib/mistral/chat";
 import { appendChatTurn, getProjectState } from "@/lib/store";
 import type { ChatTurn } from "@/lib/types";
 
@@ -14,13 +14,13 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const state = getProjectState(id);
+  const state = await getProjectState(id);
   if (!state) {
-    return NextResponse.json({ error: "Notebook not found" }, { status: 404 });
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
   if (!state.processed) {
     return NextResponse.json(
-      { error: "Process the notebook before chatting." },
+      { error: "Process the project before chatting." },
       { status: 400 },
     );
   }
@@ -37,10 +37,10 @@ export async function POST(
     content: message,
     createdAt: new Date().toISOString(),
   };
-  appendChatTurn(id, userTurn);
+  await appendChatTurn(id, user.id, userTurn);
 
   try {
-    const { answer, citations } = await answerFromNotebook({
+    const { answer, citations } = await answerFromProject({
       role: user.role,
       team: user.team,
       message,
@@ -54,7 +54,7 @@ export async function POST(
       citations,
       createdAt: new Date().toISOString(),
     };
-    appendChatTurn(id, assistantTurn);
+    await appendChatTurn(id, user.id, assistantTurn);
 
     return NextResponse.json({ userTurn, assistantTurn });
   } catch (err) {

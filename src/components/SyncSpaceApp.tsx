@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { NotebookChat } from "@/components/NotebookChat";
+import { ProjectChat } from "@/components/ProjectChat";
 import { ProjectSidebar } from "@/components/ProjectSidebar";
 import { StudioRail } from "@/components/StudioRail";
 import { readJson } from "@/lib/http";
@@ -11,7 +11,7 @@ import type {
   ConflictFlag,
   DocumentSource,
   Insight,
-  ProjectNotebook,
+  Project,
   ProjectView,
   SessionUser,
   SourceRef,
@@ -23,9 +23,9 @@ export function SyncSpaceApp({
   initialProjects,
 }: {
   user: SessionUser;
-  initialProjects: ProjectNotebook[];
+  initialProjects: Project[];
 }) {
-  const [projects, setProjects] = useState<ProjectNotebook[]>(initialProjects);
+  const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(
     initialProjects[0]?.id ?? null,
   );
@@ -42,7 +42,7 @@ export function SyncSpaceApp({
     try {
       const res = await fetch(`/api/projects/${projectId}`);
       const data = await readJson<{ view: ProjectView; error?: string }>(res);
-      if (!res.ok) throw new Error(data.error || "Failed to load notebook");
+      if (!res.ok) throw new Error(data.error || "Failed to load project");
       const nextView: ProjectView = data.view;
       setView(nextView);
       setSelectedInsightId(nextView.insights[0]?.id ?? null);
@@ -57,7 +57,7 @@ export function SyncSpaceApp({
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on notebook change
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on project change
     if (activeProjectId) void loadView(activeProjectId);
   }, [activeProjectId, loadView]);
 
@@ -128,7 +128,14 @@ export function SyncSpaceApp({
 
   const handleDocumentUploaded = useCallback((doc: DocumentSource) => {
     setView((prev) =>
-      prev ? { ...prev, documents: [...prev.documents, doc] } : prev,
+      prev
+        ? {
+            ...prev,
+            documents: [...prev.documents, doc],
+            processed: false,
+            lastProcessedAt: null,
+          }
+        : prev,
     );
   }, []);
 
@@ -139,7 +146,7 @@ export function SyncSpaceApp({
     setTab("radar");
   }, []);
 
-  const handleProjectCreated = useCallback((project: ProjectNotebook) => {
+  const handleProjectCreated = useCallback((project: Project) => {
     setProjects((prev) => [...prev, project]);
     setActiveProjectId(project.id);
   }, []);
@@ -161,13 +168,13 @@ export function SyncSpaceApp({
         <div className="flex items-center justify-center px-8 text-center text-sm text-muted-foreground">
           <p>
             {viewLoading
-              ? "Loading notebook…"
-              : "Select or create a notebook to begin."}
+              ? "Loading project…"
+              : "Select or create a project to begin."}
           </p>
         </div>
       ) : (
         <>
-          <NotebookChat
+          <ProjectChat
             projectId={activeProjectId}
             project={view.project}
             processed={view.processed}

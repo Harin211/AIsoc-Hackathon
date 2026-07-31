@@ -11,6 +11,6 @@ export default async function AppHome() {
     redirect("/login");
   }
 
-  const projects = listProjects(user.projectIds);
+  const projects = await listProjects(user.projectIds);
   return <SyncSpaceApp user={user} initialProjects={projects} />;
 }

@@ -1,21 +1,21 @@
 import { cookies } from "next/headers";
 import { SESSION_COOKIE } from "@/lib/auth/constants";
 import { signSessionToken, verifySessionToken } from "@/lib/auth/token";
-import { findUserByUsername, toSessionUser } from "@/lib/auth/users";
+import { findUserById, toSessionUser } from "@/lib/auth/users";
 import type { SessionUser } from "@/lib/types";
 
 export async function getSessionUser(): Promise<SessionUser | null> {
   const store = await cookies();
   const token = store.get(SESSION_COOKIE)?.value;
-  const username = verifySessionToken(token);
-  if (!username) return null;
-  const user = findUserByUsername(username);
+  const userId = verifySessionToken(token);
+  if (!userId) return null;
+  const user = await findUserById(userId);
   return user ? toSessionUser(user) : null;
 }
 
-export async function setSessionCookie(username: string): Promise<void> {
+export async function setSessionCookie(userId: string): Promise<void> {
   const store = await cookies();
-  store.set(SESSION_COOKIE, signSessionToken(username), {
+  store.set(SESSION_COOKIE, signSessionToken(userId), {
     httpOnly: true,
     sameSite: "lax",
     path: "/",

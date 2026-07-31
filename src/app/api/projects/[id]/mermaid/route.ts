@@ -13,9 +13,9 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const state = getProjectState(id);
+  const state = await getProjectState(id);
   if (!state) {
-    return NextResponse.json({ error: "Notebook not found" }, { status: 404 });
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
   try {

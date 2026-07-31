@@ -4,13 +4,14 @@ import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { FileUp, LogOut, Plus, Radar } from "lucide-react";
 import { readJson } from "@/lib/http";
+import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type {
   DocumentSource,
-  ProjectNotebook,
+  Project,
   ProjectView,
   SessionUser,
 } from "@/lib/types";
@@ -33,10 +34,10 @@ export function ProjectSidebar({
   onProcessed,
 }: {
   user: SessionUser;
-  projects: ProjectNotebook[];
+  projects: Project[];
   activeProjectId: string | null;
   onSelectProject: (id: string) => void;
-  onProjectCreated: (project: ProjectNotebook) => void;
+  onProjectCreated: (project: Project) => void;
   view: ProjectView | null;
   onDocumentUploaded: (doc: DocumentSource) => void;
   onProcessed: (view: ProjectView, note: string) => void;
@@ -62,12 +63,12 @@ export function ProjectSidebar({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       });
-      const data = await readJson<{ project: ProjectNotebook; error?: string }>(res);
-      if (!res.ok) throw new Error(data.error || "Could not create notebook");
+      const data = await readJson<{ project: Project; error?: string }>(res);
+      if (!res.ok) throw new Error(data.error || "Could not create project");
       onProjectCreated(data.project);
       setNewProjectName("");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Could not create notebook");
+      alert(err instanceof Error ? err.message : "Could not create project");
     } finally {
       setCreatingBusy(false);
     }
@@ -148,6 +149,7 @@ export function ProjectSidebar({
             {user.team} · {ROLE_LABEL[user.role]}
           </p>
         </div>
+        <ChangePasswordDialog />
         <Button variant="ghost" size="icon" onClick={() => void logout()} aria-label="Sign out">
           <LogOut className="size-4" />
         </Button>
@@ -155,7 +157,7 @@ export function ProjectSidebar({
 
       <div className="mt-6 flex flex-col gap-2 px-4">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Notebooks
+          Projects
         </p>
         <ul className="flex flex-col gap-1">
           {projects.map((p) => (
@@ -179,7 +181,7 @@ export function ProjectSidebar({
           <Input
             value={newProjectName}
             onChange={(e) => setNewProjectName(e.target.value)}
-            placeholder="New notebook name"
+            placeholder="New project name"
             disabled={creatingBusy}
             className="h-9"
           />
@@ -188,7 +190,7 @@ export function ProjectSidebar({
             variant="outline"
             size="icon"
             disabled={creatingBusy || !newProjectName.trim()}
-            aria-label="Create notebook"
+            aria-label="Create project"
           >
             <Plus className="size-4" />
           </Button>
@@ -248,8 +250,8 @@ export function ProjectSidebar({
             {processBusy
               ? "Processing…"
               : view.processed
-                ? "Re-process notebook"
-                : "Process notebook"}
+                ? "Re-process project"
+                : "Process project"}
           </Button>
 
           {view.lastProcessedAt && (

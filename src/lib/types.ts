@@ -1,12 +1,17 @@
-export type Role = "engineering" | "marketing" | "executive";
-export type SourceType = "meeting_transcript" | "discord" | "slack";
+export type Role = "engineering" | "marketing" | "product" | "executive";
+export type SourceType =
+  | "meeting_transcript"
+  | "discord"
+  | "slack"
+  | "document";
 export type ConflictType = "explicit_contradiction" | "possible_mismatch";
 export type ConflictStatus = "open" | "confirmed" | "dismissed";
 
 export interface SourceRef {
-  channel: "meeting" | "discord" | "slack";
+  channel: "meeting" | "discord" | "slack" | "document";
   line_ids?: number[];
   message_ids?: string[];
+  document_id?: string;
   timestamp: string;
 }
 
@@ -50,20 +55,75 @@ export interface ChatMessage {
   text: string;
 }
 
+export interface DocumentLine {
+  id: number;
+  text: string;
+}
+
+export interface DocumentSource {
+  id: string;
+  filename: string;
+  mime: string;
+  uploadedAt: string;
+  uploadedBy: string;
+  lines: DocumentLine[];
+}
+
 export interface ProjectNotebook {
   id: string;
   name: string;
   description: string;
 }
 
-export interface InsightStore {
+export interface ChatCitation {
+  insightId: string;
+  sourceRefs: SourceRef[];
+}
+
+export interface ChatTurn {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  citations?: ChatCitation[];
+  createdAt: string;
+}
+
+/** Server-side persisted state for one notebook. */
+export interface ProjectState {
   project: ProjectNotebook;
-  insights: Insight[];
-  conflicts: ConflictFlag[];
   transcript: TranscriptLine[];
   discord: ChatMessage[];
+  documents: DocumentSource[];
+  insights: Insight[];
+  conflicts: ConflictFlag[];
+  chat: ChatTurn[];
   processed: boolean;
   lastProcessedAt: string | null;
+}
+
+/** Role-filtered payload sent to the client for the active notebook. */
+export interface ProjectView {
+  project: ProjectNotebook;
+  transcript: TranscriptLine[];
+  discord: ChatMessage[];
+  documents: DocumentSource[];
+  insights: Insight[];
+  allInsights: Insight[];
+  conflicts: ConflictFlag[];
+  chat: ChatTurn[];
+  processed: boolean;
+  lastProcessedAt: string | null;
+  viewerRole: Role;
+}
+
+export interface SessionUser {
+  id: string;
+  username: string;
+  name: string;
+  role: Role;
+  team: string;
+  projectIds: string[];
+  avatarColor: string;
 }
 
 export type StudioTab = "briefing" | "radar" | "sources" | "visual" | "audio";

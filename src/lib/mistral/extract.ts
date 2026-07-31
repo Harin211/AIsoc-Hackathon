@@ -1,22 +1,26 @@
 import { chatJson, hasMistralKey, MODELS } from "@/lib/mistral/client";
-import type { ChatMessage, Insight, TranscriptLine } from "@/lib/types";
+import type { ChatMessage, DocumentSource, Insight, TranscriptLine } from "@/lib/types";
+
+const ALL_ROLES = ["engineering", "marketing", "product", "executive"] as const;
 
 const INSIGHT_SCHEMA = `{
   "insights": [
     {
       "id": "insight_XXXX",
       "project_id": "q3_launch",
-      "source_type": "meeting_transcript | discord | slack",
+      "source_type": "meeting_transcript | discord | slack | document",
       "source_refs": [
         { "channel": "meeting", "line_ids": [104], "timestamp": "00:05:18" },
-        { "channel": "discord", "message_ids": ["9821005"], "timestamp": "2026-07-29T10:04:00Z" }
+        { "channel": "discord", "message_ids": ["9821005"], "timestamp": "2026-07-29T10:04:00Z" },
+        { "channel": "document", "document_id": "doc_abc123", "line_ids": [3, 4], "timestamp": "2026-07-30T00:00:00Z" }
       ],
       "raw_statement": "factual claim extracted verbatim in spirit",
       "topic": "snake_case_topic",
-      "impact_domains": ["engineering", "marketing", "executive"],
+      "impact_domains": ["engineering", "marketing", "product", "executive"],
       "framings": {
         "engineering": "...",
         "marketing": "...",
+        "product": "...",
         "executive": "..."
       },
       "confidence": 0.0,
@@ -29,6 +33,7 @@ export async function extractInsights(input: {
   projectId: string;
   transcript: TranscriptLine[];
   discord: ChatMessage[];
+  documents?: DocumentSource[];
 }): Promise<Insight[]> {
   if (!hasMistralKey()) {
     throw new Error("NO_API_KEY");
@@ -48,12 +53,22 @@ export async function extractInsights(input: {
     )
     .join("\n");
 
-  const system = `You are SyncSpace Insight Extractor. Extract a single verified set of Insight objects from meeting transcript and chat.
+  const documentsBlock = (input.documents ?? [])
+    .map(
+      (d) =>
+        `--- DOCUMENT ${d.id} (${d.filename}) ---\n` +
+        d.lines
+          .map((l) => `[doc:${d.id} line ${l.id}] ${l.text}`)
+          .join("\n"),
+    )
+    .join("\n\n");
+
+  const system = `You are SyncSpace Insight Extractor. Extract a single verified set of Insight objects from meeting transcript, chat, and uploaded documents.
 Rules:
 - Output ONLY valid JSON matching this schema: ${INSIGHT_SCHEMA}
-- impact_domains is a LIST — tag every department the insight affects (many-to-many). Never force a single bucket.
-- source_refs MUST cite exact line_ids / message_ids from the input. Provenance depends on this.
-- framings change altitude/jargon per role but MUST preserve every concrete number, date, and severity from the source.
+- impact_domains is a LIST — tag every department the insight affects (many-to-many) using only: engineering, marketing, product, executive. Never force a single bucket.
+- source_refs MUST cite exact line_ids / message_ids / document_id from the input. Provenance depends on this.
+- framings change altitude/jargon per role but MUST preserve every concrete number, date, and severity from the source. Provide a framing for every role in impact_domains.
 - Prefer 3–6 high-signal insights over noise.
 - project_id must be "${input.projectId}".
 - extracted_at must be the current ISO timestamp.
@@ -62,10 +77,13 @@ Rules:
   const user = `PROJECT: ${input.projectId}
 
 === MEETING TRANSCRIPT ===
-${transcriptBlock}
+${transcriptBlock || "(none)"}
 
 === DISCORD / CHAT LOG ===
-${discordBlock}
+${discordBlock || "(none)"}
+
+=== UPLOADED DOCUMENTS ===
+${documentsBlock || "(none)"}
 
 Extract insights now as JSON.`;
 
@@ -79,10 +97,11 @@ Extract insights now as JSON.`;
     ...insight,
     id: insight.id || `insight_${String(idx + 1).padStart(4, "0")}`,
     project_id: input.projectId,
-    extracted_at: insight.extracted_at || now,
+    // Server-authoritative — models are unreliable at producing "now".
+    extracted_at: now,
     impact_domains: insight.impact_domains?.length
       ? insight.impact_domains
-      : ["engineering", "marketing", "executive"],
+      : [...ALL_ROLES],
     framings: insight.framings ?? {},
     source_refs: insight.source_refs ?? [],
     confidence: clamp01(insight.confidence ?? 0.7),

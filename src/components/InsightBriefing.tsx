@@ -1,10 +1,15 @@
 "use client";
 
+import { ArrowRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { Insight, Role } from "@/lib/types";
 
 const ROLE_TITLE: Record<Role, string> = {
   engineering: "Engineering briefing",
   marketing: "Marketing / PM briefing",
+  product: "Product briefing",
   executive: "Executive briefing",
 };
 
@@ -22,60 +27,67 @@ export function InsightBriefing({
   onProve: (insight: Insight) => void;
 }) {
   return (
-    <section className="panel">
-      <header className="panel-header">
-        <div>
-          <p className="eyebrow">Mistral Studio · Text</p>
-          <h2>{ROLE_TITLE[role]}</h2>
-          <p className="panel-lede">
-            Framed for this reader from the same cached Insight Store — facts
-            pinned, jargon translated.
-          </p>
-        </div>
+    <section className="flex flex-col gap-4">
+      <header>
+        <h2 className="font-display text-lg font-semibold">{ROLE_TITLE[role]}</h2>
+        <p className="text-sm text-muted-foreground">
+          Key facts, framed for your role.
+        </p>
       </header>
 
-      <ul className="briefing-list">
+      {insights.length === 0 && (
+        <p className="text-sm italic text-muted-foreground">
+          No insights extracted from this notebook yet.
+        </p>
+      )}
+
+      <ul className="flex flex-col gap-2.5">
         {insights.map((insight) => {
-          const framing =
-            insight.framings[role] || insight.raw_statement;
+          const framing = insight.framings[role] || insight.raw_statement;
           const active = selectedId === insight.id;
           return (
             <li key={insight.id}>
-              <div
-                className={active ? "briefing-item active" : "briefing-item"}
+              <Card
                 role="button"
                 tabIndex={0}
                 onClick={() => onSelect(insight)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") onSelect(insight);
                 }}
+                className={cn(
+                  "cursor-pointer gap-2.5 border p-3.5 transition-colors",
+                  active
+                    ? "border-primary/60 bg-primary/10"
+                    : "border-border/60 bg-card/60 hover:border-border",
+                )}
               >
-                <div className="briefing-top">
-                  <span className="tag">{insight.topic}</span>
-                  <span className="conf">
+                <div className="flex items-center justify-between gap-2">
+                  <Badge variant="outline">{insight.topic}</Badge>
+                  <span className="text-xs text-muted-foreground">
                     {Math.round(insight.confidence * 100)}% conf
                   </span>
                 </div>
-                <p className="briefing-text">{framing}</p>
-                <p className="briefing-raw">
+                <p className="text-sm">{framing}</p>
+                <p className="text-xs text-muted-foreground">
                   Source fact: {insight.raw_statement}
                 </p>
-                <div className="briefing-actions">
-                  <span className="domains">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground">
                     {insight.impact_domains.join(" · ")}
                   </span>
                   <button
                     type="button"
-                    className="prove-link"
                     onClick={(e) => {
                       e.stopPropagation();
                       onProve(insight);
                     }}
+                    className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                   >
-                    Click to source →
+                    Click to source
+                    <ArrowRight className="size-3" />
                   </button>
                 </div>
-              </div>
+              </Card>
             </li>
           );
         })}

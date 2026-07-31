@@ -4,7 +4,7 @@ import type { ChatMessage } from "@/lib/types";
 export const DEMO_DISCORD: ChatMessage[] = [
   {
     id: "9821001",
-    author: "priya",
+    author: "nathan",
     role: "marketing",
     channel: "#q3-launch",
     timestamp: "2026-07-16T09:14:00Z",
@@ -12,7 +12,7 @@ export const DEMO_DISCORD: ChatMessage[] = [
   },
   {
     id: "9821002",
-    author: "ava",
+    author: "abdo",
     role: "pm",
     channel: "#q3-launch",
     timestamp: "2026-07-16T09:22:00Z",
@@ -20,7 +20,7 @@ export const DEMO_DISCORD: ChatMessage[] = [
   },
   {
     id: "9821003",
-    author: "marcus",
+    author: "manish",
     role: "engineering",
     channel: "#q3-launch",
     timestamp: "2026-07-22T14:08:00Z",
@@ -28,7 +28,7 @@ export const DEMO_DISCORD: ChatMessage[] = [
   },
   {
     id: "9821004",
-    author: "ava",
+    author: "abdo",
     role: "pm",
     channel: "#q3-launch",
     timestamp: "2026-07-28T18:41:00Z",
@@ -36,7 +36,7 @@ export const DEMO_DISCORD: ChatMessage[] = [
   },
   {
     id: "9821005",
-    author: "marcus",
+    author: "manish",
     role: "engineering",
     channel: "#eng-backend",
     timestamp: "2026-07-29T10:04:00Z",
@@ -44,7 +44,7 @@ export const DEMO_DISCORD: ChatMessage[] = [
   },
   {
     id: "9821006",
-    author: "devon",
+    author: "shreyas",
     role: "engineering",
     channel: "#eng-backend",
     timestamp: "2026-07-29T10:11:00Z",
@@ -52,7 +52,7 @@ export const DEMO_DISCORD: ChatMessage[] = [
   },
   {
     id: "9821007",
-    author: "marcus",
+    author: "manish",
     role: "engineering",
     channel: "#eng-backend",
     timestamp: "2026-07-29T10:18:00Z",
@@ -60,7 +60,7 @@ export const DEMO_DISCORD: ChatMessage[] = [
   },
   {
     id: "9821008",
-    author: "priya",
+    author: "nathan",
     role: "marketing",
     channel: "#q3-launch",
     timestamp: "2026-07-30T08:02:00Z",
@@ -68,7 +68,7 @@ export const DEMO_DISCORD: ChatMessage[] = [
   },
   {
     id: "9821009",
-    author: "ava",
+    author: "abdo",
     role: "pm",
     channel: "#q3-launch",
     timestamp: "2026-07-30T08:15:00Z",

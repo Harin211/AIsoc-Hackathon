@@ -4,6 +4,7 @@ import type { Insight, Role } from "@/lib/types";
 const ROLE_ALTITUDE: Record<Role, string> = {
   engineering: "technical constraints, estimates, API/system impact",
   marketing: "campaign dates, deliverables, external messaging risk",
+  product: "scope tradeoffs, feature prioritization, roadmap impact",
   executive: "strategic risk, board commitment, decision needed",
 };
 

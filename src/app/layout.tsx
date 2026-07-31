@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans, Sora } from "next/font/google";
+import { Aleo, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 
-const sora = Sora({
-  variable: "--font-sora",
+const aleo = Aleo({
+  variable: "--font-aleo",
   subsets: ["latin"],
-  weight: ["600", "700"],
+  weight: ["500", "600", "700"],
 });
 
 const plex = IBM_Plex_Sans({
@@ -34,7 +34,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${sora.variable} ${plex.variable} ${plexMono.variable} h-full antialiased`}
+      className={`${aleo.variable} ${plex.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">{children}</body>
     </html>

@@ -29,6 +29,8 @@ export const CURATED_INSIGHTS: Insight[] = [
         "Product committed September 15 launch; API contracts must freeze by July 28 to hold that date.",
       marketing:
         "Q3 launch is locked for September 15 — agency, press kit, and influencer holds should assume that date.",
+      product:
+        "September 15 is the committed launch date for the full feature set — treat it as fixed scope planning input.",
       executive:
         "Board-facing commitment: September 15 Q3 launch. Slippage requires two weeks' notice.",
     },
@@ -49,12 +51,14 @@ export const CURATED_INSIGHTS: Insight[] = [
     raw_statement:
       "Engineering freezes API contracts by July 28; analytics depends on a stable events API.",
     topic: "api_freeze",
-    impact_domains: ["engineering", "marketing"],
+    impact_domains: ["engineering", "marketing", "product"],
     framings: {
       engineering:
         "Hard freeze on API contracts July 28; onboarding analytics rides the events API and needs it stable.",
       marketing:
         "Feature set for launch assumes the events API stays unchanged after July 28.",
+      product:
+        "Onboarding analytics ships with launch only if the events API contract holds past July 28 — a hard dependency to track.",
       executive:
         "Technical prerequisite for September 15: API freeze held on July 28.",
     },
@@ -75,12 +79,14 @@ export const CURATED_INSIGHTS: Insight[] = [
     raw_statement:
       "Backend refactor on the events API pushes API-dependent launch features to Q4 (~3 weeks / early October).",
     topic: "launch_timeline",
-    impact_domains: ["engineering", "marketing", "executive"],
+    impact_domains: ["engineering", "marketing", "product", "executive"],
     framings: {
       engineering:
         "Events API schema rewrite (~3 weeks) slips dependent endpoints — including onboarding analytics — into early Q4.",
       marketing:
         "Launch-critical features tied to the events API will not be ready for the September 15 campaign date; earliest is early October.",
+      product:
+        "Onboarding analytics and a couple of launch-critical endpoints are now blocked on a ~3-week backend rewrite — expect them to slip out of the September 15 scope.",
       executive:
         "Q3 launch date is at risk: engineering now implies Q4 for API-dependent features. Recommend confirming Q4 fallback.",
     },
@@ -101,12 +107,14 @@ export const CURATED_INSIGHTS: Insight[] = [
     raw_statement:
       "PM and Marketing still believe September 15 is unchanged as of July 30 — no reconciliation with the backend refactor thread.",
     topic: "launch_timeline",
-    impact_domains: ["marketing", "executive"],
+    impact_domains: ["marketing", "product", "executive"],
     framings: {
       engineering:
         "Cross-team: PM/Marketing have not absorbed the events API slip yet — Sept 15 still treated as live.",
       marketing:
         "As of July 30 you were still planning Sept 15 creative review — engineering may have moved the date without a channel ping to #q3-launch.",
+      product:
+        "Roadmap still shows September 15 as of July 30 — the engineering slip hasn't been reconciled into scope planning yet.",
       executive:
         "As of July 30, PM still reported no change from the July 14 decision — despite an engineering-only Discord thread implying Q4.",
     },

@@ -1,51 +1,76 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import { AlignmentRadar } from "@/components/AlignmentRadar";
-import { AudioBriefing } from "@/components/AudioBriefing";
-import { InsightBriefing } from "@/components/InsightBriefing";
-import { MermaidPanel } from "@/components/MermaidPanel";
-import { ProcessPanel } from "@/components/ProcessPanel";
-import { RoleSelector } from "@/components/RoleSelector";
-import { SourceViewer } from "@/components/SourceViewer";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { NotebookChat } from "@/components/NotebookChat";
+import { ProjectSidebar } from "@/components/ProjectSidebar";
+import { StudioRail } from "@/components/StudioRail";
+import { readJson } from "@/lib/http";
 import type {
+  ChatCitation,
+  ChatTurn,
   ConflictFlag,
+  DocumentSource,
   Insight,
-  InsightStore,
-  Role,
+  ProjectNotebook,
+  ProjectView,
+  SessionUser,
   SourceRef,
   StudioTab,
 } from "@/lib/types";
 
-const EMPTY: InsightStore = {
-  project: {
-    id: "q3_launch",
-    name: "Q3 Launch",
-    description: "",
-  },
-  insights: [],
-  conflicts: [],
-  transcript: [],
-  discord: [],
-  processed: false,
-  lastProcessedAt: null,
-};
-
-export function SyncSpaceApp({ initial }: { initial: InsightStore }) {
-  const [store, setStore] = useState<InsightStore>(initial ?? EMPTY);
-  const [role, setRole] = useState<Role>("executive");
+export function SyncSpaceApp({
+  user,
+  initialProjects,
+}: {
+  user: SessionUser;
+  initialProjects: ProjectNotebook[];
+}) {
+  const [projects, setProjects] = useState<ProjectNotebook[]>(initialProjects);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(
+    initialProjects[0]?.id ?? null,
+  );
+  const [view, setView] = useState<ProjectView | null>(null);
+  const [viewLoading, setViewLoading] = useState(false);
   const [tab, setTab] = useState<StudioTab>("briefing");
   const [selectedInsightId, setSelectedInsightId] = useState<string | null>(
     null,
   );
   const [highlightRefs, setHighlightRefs] = useState<SourceRef[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [statusNote, setStatusNote] = useState<string | null>(null);
+
+  const loadView = useCallback(async (projectId: string) => {
+    setViewLoading(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}`);
+      const data = await readJson<{ view: ProjectView; error?: string }>(res);
+      if (!res.ok) throw new Error(data.error || "Failed to load notebook");
+      const nextView: ProjectView = data.view;
+      setView(nextView);
+      setSelectedInsightId(nextView.insights[0]?.id ?? null);
+      setHighlightRefs(nextView.insights[0]?.source_refs ?? []);
+      setTab("briefing");
+    } catch (err) {
+      console.error(err);
+      setView(null);
+    } finally {
+      setViewLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on notebook change
+    if (activeProjectId) void loadView(activeProjectId);
+  }, [activeProjectId, loadView]);
 
   const selectedInsight = useMemo(
-    () => store.insights.find((i) => i.id === selectedInsightId) ?? null,
-    [store.insights, selectedInsightId],
+    () => view?.allInsights.find((i) => i.id === selectedInsightId) ?? null,
+    [view, selectedInsightId],
   );
+
+  const insightsById = useMemo(() => {
+    const map = new Map<string, Insight>();
+    view?.allInsights.forEach((i) => map.set(i.id, i));
+    return map;
+  }, [view]);
 
   const focusInsight = useCallback((insight: Insight) => {
     setSelectedInsightId(insight.id);
@@ -55,170 +80,120 @@ export function SyncSpaceApp({ initial }: { initial: InsightStore }) {
 
   const focusConflict = useCallback(
     (conflict: ConflictFlag) => {
-      const first = store.insights.find((i) =>
+      if (!view) return;
+      const involved = view.allInsights.filter((i) =>
         conflict.involved_insights.includes(i.id),
       );
-      if (first) {
-        setSelectedInsightId(first.id);
-        const refs = store.insights
-          .filter((i) => conflict.involved_insights.includes(i.id))
-          .flatMap((i) => i.source_refs);
-        setHighlightRefs(refs);
+      if (involved[0]) {
+        setSelectedInsightId(involved[0].id);
+        setHighlightRefs(involved.flatMap((i) => i.source_refs));
       }
       setTab("sources");
     },
-    [store.insights],
+    [view],
   );
 
-  const onProcessed = useCallback((next: InsightStore, note: string) => {
-    setStore(next);
-    setStatusNote(note);
-    setSelectedInsightId(next.insights[0]?.id ?? null);
-    setHighlightRefs(next.insights[0]?.source_refs ?? []);
+  const handleConflictUpdate = useCallback((conflict: ConflictFlag) => {
+    setView((prev) =>
+      prev
+        ? {
+            ...prev,
+            conflicts: prev.conflicts.map((c) =>
+              c.id === conflict.id ? conflict : c,
+            ),
+          }
+        : prev,
+    );
+  }, []);
+
+  const handleCitationClick = useCallback(
+    (citation: ChatCitation) => {
+      const insight = insightsById.get(citation.insightId);
+      setSelectedInsightId(citation.insightId);
+      setHighlightRefs(
+        citation.sourceRefs.length
+          ? citation.sourceRefs
+          : (insight?.source_refs ?? []),
+      );
+      setTab("sources");
+    },
+    [insightsById],
+  );
+
+  const handleTurnsAppended = useCallback((turns: ChatTurn[]) => {
+    setView((prev) =>
+      prev ? { ...prev, chat: [...prev.chat, ...turns] } : prev,
+    );
+  }, []);
+
+  const handleDocumentUploaded = useCallback((doc: DocumentSource) => {
+    setView((prev) =>
+      prev ? { ...prev, documents: [...prev.documents, doc] } : prev,
+    );
+  }, []);
+
+  const handleProcessed = useCallback((nextView: ProjectView) => {
+    setView(nextView);
+    setSelectedInsightId(nextView.insights[0]?.id ?? null);
+    setHighlightRefs(nextView.insights[0]?.source_refs ?? []);
     setTab("radar");
   }, []);
 
-  const onConflictUpdate = useCallback((conflict: ConflictFlag) => {
-    setStore((prev) => ({
-      ...prev,
-      conflicts: prev.conflicts.map((c) =>
-        c.id === conflict.id ? conflict : c,
-      ),
-    }));
+  const handleProjectCreated = useCallback((project: ProjectNotebook) => {
+    setProjects((prev) => [...prev, project]);
+    setActiveProjectId(project.id);
   }, []);
 
-  const openFlags = store.conflicts.filter((c) => c.status === "open").length;
-
   return (
-    <div className="app-shell">
-      <header className="topbar">
-        <div className="brand-block">
-          <p className="brand">SyncSpace</p>
-          <p className="brand-sub">Verified truth · role-aware delivery</p>
-        </div>
-        <div className="project-chip">
-          <span className="project-label">Notebook</span>
-          <strong>{store.project.name}</strong>
-          <span className="project-id">{store.project.id}</span>
-        </div>
-        <RoleSelector value={role} onChange={setRole} />
-      </header>
+    <div className="grid h-screen grid-cols-1 overflow-hidden bg-background text-foreground lg:grid-cols-[280px_1fr_380px]">
+      <ProjectSidebar
+        user={user}
+        projects={projects}
+        activeProjectId={activeProjectId}
+        onSelectProject={setActiveProjectId}
+        onProjectCreated={handleProjectCreated}
+        view={view}
+        onDocumentUploaded={handleDocumentUploaded}
+        onProcessed={handleProcessed}
+      />
 
-      <div className="workspace">
-        <aside className="rail">
-          <ProcessPanel
-            busy={busy}
-            setBusy={setBusy}
-            processed={store.processed}
-            lastProcessedAt={store.lastProcessedAt}
-            statusNote={statusNote}
-            onProcessed={onProcessed}
+      {!activeProjectId || viewLoading || !view ? (
+        <div className="flex items-center justify-center px-8 text-center text-sm text-muted-foreground">
+          <p>
+            {viewLoading
+              ? "Loading notebook…"
+              : "Select or create a notebook to begin."}
+          </p>
+        </div>
+      ) : (
+        <>
+          <NotebookChat
+            projectId={activeProjectId}
+            project={view.project}
+            processed={view.processed}
+            turns={view.chat}
+            insightsById={insightsById}
+            onTurnsAppended={handleTurnsAppended}
+            onCitationClick={handleCitationClick}
           />
-
-          <nav className="studio-nav" aria-label="Mistral Studio">
-            {(
-              [
-                ["briefing", "Text briefing"],
-                ["radar", `Alignment Radar${openFlags ? ` (${openFlags})` : ""}`],
-                ["sources", "Sources"],
-                ["visual", "Decision flow"],
-                ["audio", "Audio briefing"],
-              ] as [StudioTab, string][]
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                className={tab === id ? "nav-btn active" : "nav-btn"}
-                onClick={() => setTab(id)}
-                disabled={!store.processed && id !== "sources"}
-              >
-                {label}
-              </button>
-            ))}
-          </nav>
-
-          {store.processed && (
-            <div className="insight-list">
-              <p className="rail-heading">Insight Store</p>
-              {store.insights.map((insight) => (
-                <button
-                  key={insight.id}
-                  type="button"
-                  className={
-                    selectedInsightId === insight.id
-                      ? "insight-item active"
-                      : "insight-item"
-                  }
-                  onClick={() => {
-                    setSelectedInsightId(insight.id);
-                    setHighlightRefs(insight.source_refs);
-                  }}
-                >
-                  <span className="insight-topic">{insight.topic}</span>
-                  <span className="insight-raw">{insight.raw_statement}</span>
-                  <span className="insight-meta">
-                    {insight.impact_domains.join(" · ")} ·{" "}
-                    {Math.round(insight.confidence * 100)}%
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </aside>
-
-        <main className="stage">
-          {!store.processed ? (
-            <div className="empty-stage">
-              <h1>Same meeting. Three understandings. One record.</h1>
-              <p>
-                Load the July 14 transcript and the July 29 Discord log, then run
-                extraction once. Every role briefing, conflict flag, Mermaid
-                node, and audio line re-renders from that cached Insight Store.
-              </p>
-              <ol>
-                <li>PM locks September 15 in the room.</li>
-                <li>Engineering quietly slips dependent APIs to Q4 in Discord.</li>
-                <li>Alignment Radar surfaces the gap before the deadline does.</li>
-              </ol>
-            </div>
-          ) : (
-            <>
-              {tab === "briefing" && (
-                <InsightBriefing
-                  insights={store.insights}
-                  role={role}
-                  selectedId={selectedInsightId}
-                  onSelect={(insight) => {
-                    setSelectedInsightId(insight.id);
-                    setHighlightRefs(insight.source_refs);
-                  }}
-                  onProve={focusInsight}
-                />
-              )}
-              {tab === "radar" && (
-                <AlignmentRadar
-                  conflicts={store.conflicts}
-                  insights={store.insights}
-                  onFocus={focusConflict}
-                  onUpdate={onConflictUpdate}
-                />
-              )}
-              {tab === "sources" && (
-                <SourceViewer
-                  transcript={store.transcript}
-                  discord={store.discord}
-                  highlightRefs={highlightRefs}
-                  selectedInsight={selectedInsight}
-                />
-              )}
-              {tab === "visual" && (
-                <MermaidPanel insights={store.insights} />
-              )}
-              {tab === "audio" && <AudioBriefing role={role} />}
-            </>
-          )}
-        </main>
-      </div>
+          <StudioRail
+            projectId={activeProjectId}
+            view={view}
+            tab={tab}
+            onTabChange={setTab}
+            selectedInsightId={selectedInsightId}
+            highlightRefs={highlightRefs}
+            selectedInsight={selectedInsight}
+            onSelectInsight={(insight) => {
+              setSelectedInsightId(insight.id);
+              setHighlightRefs(insight.source_refs);
+            }}
+            onProveInsight={focusInsight}
+            onConflictFocus={focusConflict}
+            onConflictUpdate={handleConflictUpdate}
+          />
+        </>
+      )}
     </div>
   );
 }

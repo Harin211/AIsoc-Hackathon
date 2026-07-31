@@ -1,9 +1,17 @@
-import { SyncSpaceApp } from "@/components/SyncSpaceApp";
-import { getStore } from "@/lib/store";
+import Features from "@/components/marketing/Features";
+import Footer from "@/components/marketing/Footer";
+import Hero from "@/components/marketing/Hero";
+import LogoCloud from "@/components/marketing/LogoCloud";
+import Navbar from "@/components/marketing/Navbar";
 
-export const dynamic = "force-dynamic";
-
-export default function Home() {
-  const store = getStore();
-  return <SyncSpaceApp initial={store} />;
+export default function LandingPage() {
+  return (
+    <main className="relative overflow-x-hidden">
+      <Navbar />
+      <Hero />
+      <LogoCloud />
+      <Features />
+      <Footer />
+    </main>
+  );
 }

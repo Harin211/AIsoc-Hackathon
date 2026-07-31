@@ -1,52 +1,85 @@
+import { CURATED_CONFLICTS, CURATED_INSIGHTS } from "@/lib/demo/curated";
 import { embedTexts } from "@/lib/mistral/embed";
 import { extractInsights } from "@/lib/mistral/extract";
 import { detectConflicts } from "@/lib/mistral/radar";
-import { loadCuratedDemo, setProcessed } from "@/lib/store";
-import type { ChatMessage, InsightStore, TranscriptLine } from "@/lib/types";
+import { getProjectState, setProcessed } from "@/lib/store";
+import type { ProjectState } from "@/lib/types";
 
-export async function processNotebook(input: {
-  projectId: string;
-  transcript: TranscriptLine[];
-  discord: ChatMessage[];
-  forceCurated?: boolean;
-}): Promise<{ store: InsightStore; mode: "mistral" | "curated"; note: string }> {
-  // Soft RAG boundary: embed project label + sources so retrieval stays scoped
-  await embedTexts([
-    `project:${input.projectId}`,
-    ...input.transcript.slice(0, 5).map((l) => l.text),
-    ...input.discord.slice(0, 5).map((m) => m.text),
-  ]);
+const CURATED_FALLBACK_PROJECT_ID = "q3_launch";
 
-  if (input.forceCurated) {
-    return {
-      store: loadCuratedDemo(),
-      mode: "curated",
-      note: "Loaded curated demo insights (forced).",
-    };
+export async function processProject(
+  projectId: string,
+  opts?: { forceCurated?: boolean },
+): Promise<{ state: ProjectState; mode: "mistral" | "curated"; note: string }> {
+  const project = getProjectState(projectId);
+  if (!project) {
+    throw new Error("Project not found");
+  }
+
+  const sampleTexts = [
+    `project:${projectId}`,
+    ...project.transcript.slice(0, 5).map((l) => l.text),
+    ...project.discord.slice(0, 5).map((m) => m.text),
+    ...project.documents
+      .slice(0, 3)
+      .map((d) => d.lines.slice(0, 5).map((l) => l.text).join(" ")),
+  ];
+  // Soft RAG boundary check: embed project label + a sample of sources.
+  await embedTexts(sampleTexts);
+
+  if (opts?.forceCurated) {
+    return finishWithCurated(projectId, "Loaded cached reference insights.");
+  }
+
+  const hasAnySource =
+    project.transcript.length || project.discord.length || project.documents.length;
+  if (!hasAnySource) {
+    throw new Error(
+      "Add a transcript, chat log, or document before processing this notebook.",
+    );
   }
 
   try {
-    const insights = await extractInsights(input);
-    const conflicts = await detectConflicts(input.projectId, insights);
+    const insights = await extractInsights({
+      projectId,
+      transcript: project.transcript,
+      discord: project.discord,
+      documents: project.documents,
+    });
+    const conflicts = await detectConflicts(projectId, insights);
+    const state = setProcessed(projectId, insights, conflicts)!;
     return {
-      store: setProcessed(insights, conflicts),
+      state,
       mode: "mistral",
       note: "Extracted via Mistral Large 3 + Alignment Radar diff pass.",
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    if (message === "NO_API_KEY" || message.includes("MISTRAL_API_KEY")) {
-      return {
-        store: loadCuratedDemo(),
-        mode: "curated",
-        note: "No MISTRAL_API_KEY — using curated demo Insight Store (identical schema).",
-      };
+    const isMissingKey = message === "NO_API_KEY";
+
+    if (projectId === CURATED_FALLBACK_PROJECT_ID) {
+      const reason = isMissingKey
+        ? "No MISTRAL_API_KEY"
+        : `Mistral call failed (${message})`;
+      return finishWithCurated(
+        projectId,
+        `${reason} — using cached reference insights for this notebook.`,
+      );
     }
-    // Graceful demo fallback if live API fails on stage
-    return {
-      store: loadCuratedDemo(),
-      mode: "curated",
-      note: `Mistral call failed (${message}). Fell back to curated demo data.`,
-    };
+
+    throw new Error(
+      isMissingKey
+        ? "Set MISTRAL_API_KEY to process this notebook."
+        : `Mistral call failed: ${message}`,
+    );
   }
+}
+
+function finishWithCurated(projectId: string, note: string) {
+  const state = setProcessed(
+    projectId,
+    structuredClone(CURATED_INSIGHTS),
+    structuredClone(CURATED_CONFLICTS),
+  )!;
+  return { state, mode: "curated" as const, note };
 }

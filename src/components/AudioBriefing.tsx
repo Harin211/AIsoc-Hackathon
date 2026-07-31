@@ -1,9 +1,29 @@
 "use client";
 
 import { useState } from "react";
+import { Volume2 } from "lucide-react";
+import { readJson } from "@/lib/http";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import type { Role } from "@/lib/types";
 
-export function AudioBriefing({ role }: { role: Role }) {
+interface TtsResponse {
+  script?: string;
+  fallbackScript?: string;
+  mode?: string;
+  detail?: string;
+  audioBase64?: string;
+  mimeType?: string;
+  error?: string;
+}
+
+export function AudioBriefing({
+  projectId,
+  role,
+}: {
+  projectId: string;
+  role: Role;
+}) {
   const [script, setScript] = useState("");
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [detail, setDetail] = useState<string | null>(null);
@@ -17,16 +37,14 @@ export function AudioBriefing({ role }: { role: Role }) {
       if (audioUrl) URL.revokeObjectURL(audioUrl);
       setAudioUrl(null);
 
-      const res = await fetch("/api/tts", {
+      const res = await fetch(`/api/projects/${projectId}/tts`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
       });
-      const data = await res.json();
+      const data = await readJson<TtsResponse>(res);
       if (!res.ok) throw new Error(data.error || "TTS failed");
 
       setScript(data.script || data.fallbackScript || "");
-      setMode(data.mode);
+      setMode(data.mode ?? null);
       setDetail(data.detail ?? null);
 
       if (data.audioBase64) {
@@ -44,48 +62,46 @@ export function AudioBriefing({ role }: { role: Role }) {
   }
 
   return (
-    <section className="panel">
-      <header className="panel-header">
+    <section className="flex flex-col gap-4">
+      <header className="flex items-start justify-between gap-3">
         <div>
-          <p className="eyebrow">Mistral Studio · Audio</p>
-          <h2>Voxtral briefing</h2>
-          <p className="panel-lede">
+          <h2 className="font-display text-lg font-semibold">Audio briefing</h2>
+          <p className="text-sm text-muted-foreground">
             Podcast-style narration of the {role} text briefing. Opens with
             alignment risk when flags are open.
           </p>
         </div>
-        <button
-          type="button"
-          className="primary-btn"
+        <Button
+          size="sm"
           disabled={loading}
           onClick={() => void generate()}
+          className="shrink-0 gap-1.5"
         >
+          <Volume2 className="size-3.5" />
           {loading ? "Synthesizing…" : "Generate audio"}
-        </button>
+        </Button>
       </header>
 
       {script && (
-        <blockquote className="audio-script">
-          <p>{script}</p>
-        </blockquote>
+        <Card className="border border-border/60 bg-card/60 p-3.5 text-sm italic text-muted-foreground">
+          {script}
+        </Card>
       )}
 
       {audioUrl ? (
-        <audio controls src={audioUrl} className="audio-player" />
+        <audio controls src={audioUrl} className="w-full" />
       ) : (
         script && (
-          <p className="process-note">
+          <p className="text-sm text-primary">
             {mode === "script_only"
-              ? detail ||
-                "Script ready. Configure VOXTRAL_VOICE_ID for Voxtral playback."
+              ? detail || "Script ready. Audio narration isn't configured yet."
               : detail}
           </p>
         )
       )}
 
-      <p className="panel-foot">
-        Voxtral TTS is non-commercial by default — fine for the hackathon demo;
-        production needs a separate Mistral agreement.
+      <p className="text-xs text-muted-foreground">
+        Audio narration runs in non-commercial mode by default.
       </p>
     </section>
   );
